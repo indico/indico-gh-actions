@@ -65,8 +65,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
-      - name: Install deps
-        run: pip install --user setuptools
       - name: Generate matrix
         id: plugin-matrix
         working-directory: plugins
@@ -138,8 +136,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
-          cache: pip
-          cache-dependency-path: |
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          cache-dependency-glob: |
             indico/requirements*.txt
             plugins/**/pyproject.toml
 
@@ -155,8 +156,7 @@ jobs:
         working-directory: indico
         run: |
           sudo apt-get install libpq-dev
-          pip install --user -U pip setuptools wheel
-          pip install --user -e '.[dev]'
+          uv pip install --system -e '.[dev]'
 
       - name: Install npm deps ☕
         if: matrix.assets
@@ -168,16 +168,16 @@ jobs:
         run: |
           for dep in ${{ join(matrix.deps, ' ') }}; do
             if [[ -e plugins/${{ inputs.directory }}/$dep ]]; then
-              pip install --user -e plugins/${{ inputs.directory }}/$dep/
+              uv pip install --system -e plugins/${{ inputs.directory }}/$dep/
             else
-              pip install --user -e plugins/${{ inputs.extra-plugins-dir }}/$dep/
+              uv pip install --system -e plugins/${{ inputs.extra-plugins-dir }}/$dep/
             fi
           done
 
       - name: Install plugin 🔧
         if: matrix.install
         working-directory: plugins/${{ inputs.directory }}
-        run: pip install --user -e ${{ matrix.path || '.' }}/
+        run: uv pip install --system -e ${{ matrix.path || '.' }}/
 
       # XXX this is already done by build-wheel.py (but w/o react i18n which we don't use in plugins yet)
       # - name: Compile translations 🏴‍☠️
